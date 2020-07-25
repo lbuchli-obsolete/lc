@@ -17,16 +17,19 @@ data Lc0Expr
 
 
 data Lc0State = Lc0State {
-  sStack :: [(Addr, Map Symbol Addr)],
+  sCurrent :: Addr,
+  sEnv :: Map Symbol Addr,
   sHeap  :: Heap Lc0Node,
   sSteps :: Int
 }
 
 instance Show Lc0State where
-  show (Lc0State stack heap steps) = s_stack ++ show heap ++ s_steps 
+  show (Lc0State current env heap steps) = s_current ++ s_env ++ show heap ++ s_steps 
     where
-      s_stack = "--- Stack (" ++ show (length stack) ++ ") ---\n"
-        ++ foldl (\prev a -> prev ++ show a ++ " ") "" stack ++ "\n"
+      s_current = "--- Current Address ---\n"
+        ++ show current
+      s_env = "--- Environment (" ++ show (length env) ++ ") ---"
+        ++ foldl (\prev (s, a) -> prev ++ "\n" ++ s ++ "\t=> " ++ show a) "" env
       s_steps = "--- Steps ---\n" ++ show steps
 
 data Lc0Node

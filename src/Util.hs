@@ -45,10 +45,13 @@ instance Show a => Show (Heap a) where
 
 type Map a b = [(a, b)]
 
-mLookup :: Eq a => Show a => Map a b -> a -> Result b
+mLookup :: (Eq a, Show a) => Map a b -> a -> Result b
 mLookup ((k, v):bs) k' | k == k' = Success v
                        | k /= k' = mLookup bs k'
 mLookup m k'                     = Error (putStr $ "Can't find key " ++ show k' ++ " in map " ++ show (mDomain m))
+
+mRevLookup :: (Eq b, Show b) => Map a b -> b -> Result a
+mRevLookup = undefined
 
 mDomain :: Map a b -> [a]
 mDomain mMap = [key | (key, _) <- mMap]
