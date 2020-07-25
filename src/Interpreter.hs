@@ -14,7 +14,9 @@ eval state = isFinal state >>= \case
   False -> trace_state state >>= step >>= inc_steps >>= eval
   where
     inc_steps (Lc0State stack heap steps) = Success (Lc0State stack heap (steps+1))
-    trace_state s = Trace (show state) $ Success s
+    trace_state s = Trace (show state)
+                  $ reverseState state >>= \expr -> Trace ("Expr: " ++ show expr)
+                  $ Success s
 
 initialState :: Lc0Expr -> Lc0State
 initialState expr = Lc0State [(addr, mEmpty)] h 0
@@ -26,7 +28,7 @@ reverseState (Lc0State stack heap _) = hLookup heap x >>= reverse_node
     ((x, _):_) = stack
     reverse_node (NRaw expr)       = Success expr
     reverse_node (NVar addr)       = Var <$> envRevLookup stack addr
-    reverse_node (NAp lambda addr) = undefined 
+    reverse_node (NAp lambda addr) = hLookup heap addr >>= reverse_node >>= \expr -> Success $ Ap (Val lambda) expr
 
 isFinal :: Lc0State -> Result Bool
 isFinal (Lc0State ((x, _):_) heap _) = hLookup heap x >>= \case
@@ -44,10 +46,15 @@ step (Lc0State ((x, _):xs) heap steps) = hLookup heap x >>= step_node
     step_node (NAp lambda arg) = stepAp  new_state lambda arg
 
 stepRaw :: Lc0State -> Lc0Expr -> Result Lc0State
-stepRaw _                           (Val _)        = Error $ putStrLn "End state reached" -- TODO check this with isFinal
+--stepRaw (Lc0State stack heap steps) (Val x)        = Success (Lc0State ((loc, mEmpty):stack) heap' steps)
+--  where (heap', loc) = hAlloc heap (NAp x _)
+stepRaw _                           (Val _)        = Error $ putStrLn "End state reached"
 stepRaw (Lc0State stack heap steps) (Var name)     = envLookup stack name >>= \addr -> Success (Lc0State ((addr, mEmpty):stack) heap steps)
 stepRaw state                       (Ap (Val a) b) = stepRawAp state (Ap (Val a) b)
 stepRaw state                       (Ap a b)       = eval (initialState a) >>= reverseState >>= \a' -> stepRawAp state (Ap a' b) -- TODO add to stack instead of recursion
+--stepRaw (Lc0State stack heap steps) (Ap a b)       = Success (Lc0State ((loc, mEmpty):stack) heap' steps)
+--  where (heap', loc) = hAlloc heap a
+  
 
 stepRawAp :: Lc0State -> Lc0Expr -> Result Lc0State
 stepRawAp (Lc0State stack heap steps) (Ap (Val a) b) = Success (Lc0State ((loc_ap, mEmpty):stack) heap'' steps)
@@ -71,4 +78,7 @@ envLookup ((_, env):xs) s = mLookup env s <|> envLookup xs s
 envLookup [] s = Error . putStr $  "'" ++ s ++ "' not found in environment."
 
 envRevLookup :: [(Int, Map Symbol Addr)] -> Addr -> Result Symbol
-envRevLookup = undefined
+envRevLookup ((_, (s, a):_):_)   addr | a == addr = Success s
+envRevLookup ((x, (_, _):ys):xs) addr             = envRevLookup ((x, ys):xs) addr
+envRevLookup ((_, []):xs)        addr             = envRevLookup xs addr
+envRevLookup []                  addr             = Error $ putStrLn $ "Address " ++ show addr ++ " not found in environment."

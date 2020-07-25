@@ -29,7 +29,6 @@ library
       Lc0
       Lib
       Parser
-      Reverser
       Util
   other-modules:
       Paths_lc
