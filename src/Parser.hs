@@ -33,7 +33,7 @@ lambdaBody = _arg <|> _expr
     _expr = Expr <$> expr
 
 ws :: Parser ()
-ws = void $ _ws *> optional (str "--" *> manyTill anyChar (str "\n" <|> str "--") *> _ws)
+ws = void $ _ws *> optional (str "--" *> manyTill anyChar (str "\n" <|> try (str "--")) *> _ws)
   where _ws = many $ oneOf "\n\t "
 
 symbol :: Parser String
