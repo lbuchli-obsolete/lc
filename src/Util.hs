@@ -53,6 +53,11 @@ mLookup m k'                     = Error (putStr $ "Can't find key " ++ show k' 
 mRevLookup :: (Eq b, Show b) => Map a b -> b -> Result a
 mRevLookup = undefined
 
+mDelete :: (Eq a, Show a) => Map a b -> a -> Result (Map a b)
+mDelete ((k, _):xs) k' | k == k' = Success xs
+mDelete (x:xs)      k'           = (:) x <$> mDelete xs k'
+mDelete []          k'           = Error (putStr $ "Cannot delete " ++ show k' ++ " (Key not found)")
+
 mDomain :: Map a b -> [a]
 mDomain mMap = [key | (key, _) <- mMap]
 

@@ -1,6 +1,4 @@
--- (\+ a b (+ a b))
---   +   - (\m n f x (m f (n f x)))
--- a (2) - (\f x (f (f x)))
--- b (3) - (\f x (f (f (f x))))
-
-(\id a (id (id a))) (\x (x)) (\y (y))
+(\+ a b (+ a b))
+--   +   -- (\m n f x (m f (n f x)))
+-- a (2) -- (\f x (f (f x)))
+-- b (3) -- (\f x (f (f (f x))))

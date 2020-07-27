@@ -1,5 +1,5 @@
 module Lib (
-  Symbol, Lc0Lambda(..), Lc0Expr(..),
+  Symbol, Lc0Expr(..),
   parseProg,
   interpret,
   ShowTrace, printResult

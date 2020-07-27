@@ -19,18 +19,17 @@ expr = mkApChain Ap <$> many exprNAp
 
 exprNAp :: Parser Lc0Expr
 exprNAp = (str "(" *> expr <* str ")")
-      <|> (Val <$> lambda)
+      <|> lambda
       <|> (Var <$> symbol)
 
-lambda :: Parser Lc0Lambda
-lambda = str "(" *> lambda <* str ")"
-     <|> str "\\" *> lambdaBody
+lambda :: Parser Lc0Expr
+lambda = str "\\" *> lambdaBody
 
-lambdaBody :: Parser Lc0Lambda
+lambdaBody :: Parser Lc0Expr
 lambdaBody = _arg <|> _expr
   where
-    _arg = Arg <$> symbol <*> lambdaBody
-    _expr = Expr <$> expr
+    _arg = LArg <$> symbol <*> lambdaBody
+    _expr = exprNAp
 
 ws :: Parser ()
 ws = void $ _ws *> optional (str "--" *> manyTill anyChar (str "\n" <|> try (str "--")) *> _ws)
