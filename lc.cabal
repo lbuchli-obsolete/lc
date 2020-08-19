@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Converter
       Interpreter
       Lc0
       Lib
@@ -38,6 +39,12 @@ library
       base >=4.7 && <5
     , containers
     , parsec
+    , random
+    , smallcheck
+    , tasty
+    , tasty-discover
+    , tasty-hunit
+    , tasty-smallcheck
   default-language: Haskell2010
 
 executable lc-exe
@@ -52,12 +59,22 @@ executable lc-exe
     , containers
     , lc
     , parsec
+    , random
+    , smallcheck
+    , tasty
+    , tasty-discover
+    , tasty-hunit
+    , tasty-smallcheck
   default-language: Haskell2010
 
 test-suite lc-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Driver.hs
   other-modules:
+      ConverterTest
+      InterpreterTest
+      ParserTest
+      UtilTest
       Paths_lc
   hs-source-dirs:
       test
@@ -67,4 +84,10 @@ test-suite lc-test
     , containers
     , lc
     , parsec
+    , random
+    , smallcheck
+    , tasty
+    , tasty-discover
+    , tasty-hunit
+    , tasty-smallcheck
   default-language: Haskell2010
