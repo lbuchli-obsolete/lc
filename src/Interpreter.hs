@@ -8,13 +8,15 @@ import Util
 import Control.Applicative
 
 interpret :: Lc0Expr -> Result Lc0Expr
-interpret expr = Trace "Interpreting..." $ eval (initialState expr []) >>= reverseState
+interpret expr = Trace "Interpreting..." $ eval (initialState (renameVar arg' expr) []) >>= reverseState
+  where arg' x t = x ++ replicate t '\''
 
 eval :: Lc0State -> Result Lc0State
 eval state = isFinal state >>= \case
   True  -> Success state
   False -> trace_state state >>= step >>= inc_steps >>= eval
   where
+    inc_steps (Lc0State _       _   65536) = Error $ putStrLn "Too many steps (Max is 2^16)"
     inc_steps (Lc0State current env steps) = Success (Lc0State current env (steps+1))
     trace_state s = Trace (show s) $ Success s
 
@@ -60,9 +62,7 @@ step state = case current of
     compress other          = other
 
 stepLArg :: Lc0State -> Symbol -> Lc0Expr -> Result Lc0State
-stepLArg (Lc0State _ env steps) arg expr | none (\(s, _) -> s == arg) env = (\env' -> Lc0State expr env' steps) <$> claimEnvVar env arg
-stepLArg state                  arg expr                                  = stepLArg state arg' (renameVar arg arg' expr) -- prevent name collisions
-  where arg' = arg ++ "'"
+stepLArg (Lc0State _ env steps) arg expr = (\env' -> Lc0State expr env' steps) <$> claimEnvVar env arg
 
 stepVar :: Lc0State -> Symbol -> Result Lc0State
 stepVar (Lc0State _ env steps) name = (\expr -> Lc0State expr env steps) <$> mLookup env name 
@@ -79,10 +79,8 @@ claimEnvVar ((s, e):xs) s' = claimThis <|> claimOther
       _  -> Error $ putStrLn $ "'" ++ s ++ "' is not a free variable"
     claimOther = (:) (s, e) <$> claimEnvVar xs s'
 
-renameVar :: Symbol -> Symbol -> Lc0Expr -> Lc0Expr
-renameVar s s' (LArg n expr) | n == s = LArg s' (renameVar s s' expr)
-renameVar s s' (Var n)       | n == s = Var s'
-renameVar s s' (Ap a b)               = Ap (renameVar s s' a) (renameVar s s' b)
-renameVar s s' (ApVar n t b) | n == s = ApVar s' t (renameVar s s' b)
-renameVar s s' (ApVar n t b)          = ApVar n  t (renameVar s s' b)
-renameVar _ _  other                  = other
+renameStateVar :: (Symbol -> Int -> Symbol) -> Lc0State -> Lc0State
+renameStateVar f (Lc0State expr env steps) = Lc0State expr' env' steps
+  where
+    expr' = renameVar f expr
+    env'  = map (\(k, v) -> (f k 0, v)) env

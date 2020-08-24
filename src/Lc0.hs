@@ -13,8 +13,23 @@ data Lc0Expr
   | Var Symbol
   | Ap Lc0Expr Lc0Expr
   | ApVar Symbol Int Lc0Expr -- this is for pure performance reasons and could be left out
-  deriving (Eq)
 
+instance Eq Lc0Expr where
+  (==) a b = eq a b []
+    where
+      -- alpha equivalence
+      eq (LArg sa ea)     (LArg sb eb)     env = eq ea eb ((sa, sb):env)
+      eq (Var sa)         (Var sb)         env = linked (link_if_not_in env sa sb) sa sb
+      eq (Ap aa ba)       (Ap ab bb)       env = eq aa ab env && eq ba bb env
+      eq (ApVar sa ta ea) (ApVar sb tb eb) env = linked env' sa sb && ta == tb && eq ea eb env'
+        where env' = link_if_not_in env sa sb
+      eq _                _                _   = False
+      linked ((a', b'):_) a'' b'' | a' == a'' && b' == b'' = True
+      linked (_:xs)       a'' b''                          = linked xs a'' b''
+      linked []          _  _                              = False
+      link_if_not_in env a'' b'' | contains_link env a'' b'' = env
+      link_if_not_in env a'' b''                             = (a'', b''):env
+      contains_link env a'' b'' = any (\(a', b') -> a'' == a' || b'' == b') env
 {-
 instance Monad m => Serial m Lc0Expr {- where
   series = cons2 LArg
@@ -23,6 +38,20 @@ instance Monad m => Serial m Lc0Expr {- where
         \/ cons3 ApVar
 -}-}
   
+
+-- TODO using this breaks Smallchecks property to show examples, but I can't get the generic generator for Lc0Expr working.
+generatePseudoRandomExpr :: Int -> Lc0Expr
+generatePseudoRandomExpr x = fst $ generate $ mkStdGen x
+
+  
+renameVar :: (Symbol -> Int -> Symbol) -> Lc0Expr -> Lc0Expr
+renameVar = rename_var 0
+  where
+    rename_var x f (LArg n expr)  = LArg (f n (x+1)) (rename_var (x+1) f expr)
+    rename_var x f (Var n)        = Var (f n x)
+    rename_var x f (Ap a b)       = Ap (rename_var x f a) (rename_var x f b)
+    rename_var x f (ApVar n t b)  = ApVar (f n x) t (rename_var x f b)
+    
 instance Show Lc0Expr where
   show (LArg n e)  = "(\\" ++ n ++ " " ++ showLArg e ++ ")"
   show (ApVar n t b) = "(" ++ n ++ "*" ++ show t ++ " " ++ show b ++ ")"
